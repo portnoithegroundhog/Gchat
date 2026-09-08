@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Private!</title>
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <style>
+    /* theme colors */
+  :root {
+  --color1: #ffbe6f;
+  --color2: #865e3c;
+  --color3: #63452c;
+  --color4: #cdab8f;
+}
+  /* Remove width limits and remove default browser margins */
+  body { 
+    color: var(--color1);
+    background-color: var(--color2);
+    font-family: sans-serif; 
+    margin: 0; 
+    padding: 10px; 
+    box-sizing: border-box;
+    width: 100vw;
+  }
+
+  /* Chat box: full width, 60% of screen height */
+  #chat-box { 
+    background-color: var(--color3);
+    border: 1px solid var(--color2); 
+    width: 100%;
+    height: 60vh; 
+    overflow-y: scroll; 
+    padding: 10px; 
+    margin-bottom: 10px; 
+    box-sizing: border-box;
+  }
+
+  /* Typing area: full width, 30% of screen height */
+  #message-input {
+    background-color: var(--color3);
+    border-color: var(--color2);
+    width: 100%;
+    height: 25vh;
+    box-sizing: border-box;
+    padding: 10px;
+    resize: none; /* Prevents manual resizing if you convert it to a <textarea> */
+    color: var(--color4);
+  }
+  
+  #remote-id{
+  	color: var(--color1);
+    background-color: var(--color2);
+    border-color: var(--color2);
+    width: 500px;
+  }
+  
+  #button1{
+    background-color: var(--color3);
+    border-color: var(--color2);
+    color: var(--color4);
+  }
+  
+  #send-btn{
+    background-color: var(--color3);
+    border-color: var(--color2);
+    color: var(--color4);
+  }
+  
+
+  .msg { margin: 5px 0; }
+</style>
+</head>
+<body>
+<!--  <h2>Simple P2P Web Chat</h2> -->
+  <div>
+    <p><strong>Your Peer ID:</strong> <span id="my-id">Generating...</span></p>
+    <input type="text" id="remote-id" placeholder="Paste Remote Peer ID">
+    <button id="button1" onclick="connectToPeer()">Connect</button>
+  </div>
+  <div id="chat-box"></div>
+  <textarea id="message-input" placeholder="Type a message..." disabled></textarea>
+  <button id="send-btn" onclick="sendMessage()" disabled>Send</button>
+
+  <script>
+    let peer = new Peer();
+    let conn = null;
+
+    // Display generated Peer ID
+    peer.on('open', id => {
+      document.getElementById('my-id').innerText = id;
+    });
+
+    // Handle incoming connections (User 2 connects to User 1)
+    peer.on('connection', incomingConn => {
+      conn = incomingConn;
+      setupConnection();
+    });
+
+    // Initiate outgoing connection (User 1 connects to User 2)
+    function connectToPeer() {
+      const remoteId = document.getElementById('remote-id').value;
+      conn = peer.connect(remoteId);
+      setupConnection();
+    }
+
+    // Attach event listeners to the active data channel
+    function setupConnection() {
+      conn.on('open', () => {
+        appendMessage("System", "Connected!");
+        document.getElementById('message-input').disabled = false;
+        document.getElementById('send-btn').disabled = false;
+      });
+
+      conn.on('data', data => {
+        appendMessage("Peer", data);
+      });
+    }
+
+    // Send a message over the WebRTC data channel
+    function sendMessage() {
+      const input = document.getElementById('message-input');
+      const text = input.value;
+      if (text && conn) {
+        conn.send(text);
+        appendMessage("You", text);
+        input.value = '';
+      }
+    }
+
+    function appendMessage(sender, text) {
+      const box = document.getElementById('chat-box');
+      box.innerHTML += `<div class="msg"><strong>${sender}:</strong> ${text}</div>`;
+      box.scrollTop = box.scrollHeight;
+    }
+
+    document.getElementById('message-input').addEventListener('keydown', function(event) {
+  // Check if Enter is pressed without holding Shift
+  if (event.key === 'Enter' && !event.shiftKey) {
+    event.preventDefault(); // Prevents adding an extra blank line
+    sendMessage(); // Calls your existing send function
+  }
+});
+  </script>
+</body>
+</html>
